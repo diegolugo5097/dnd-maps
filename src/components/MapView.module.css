@@ -1,0 +1,45 @@
+.wrap {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #0a0907;
+}
+
+/* Both canvases fill the window exactly — no scroll ever */
+.scene, .vfx {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: block;
+  touch-action: none;
+}
+.vfx { pointer-events: none; }
+
+/* Placeholder shown when no image is loaded */
+.placeholder {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1;
+}
+.placeholderInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  opacity: 0.35;
+}
+.placeholderIcon  { font-size: 64px; }
+.placeholderTitle { font-size: 20px; color: var(--gold); font-weight: 700; letter-spacing: 0.04em; }
+.placeholderSub   { font-size: 13px; color: var(--text3); }
+
+/* GIF overlay layer — same position as canvas */
+.gifLayer {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}

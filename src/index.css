@@ -1,0 +1,35 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #0a0907;
+  --panel:      rgba(8,6,4,0.92);
+  --panel2:     rgba(14,11,7,0.97);
+  --border:     rgba(201,168,76,0.15);
+  --border2:    rgba(201,168,76,0.30);
+  --gold:       #c9a84c;
+  --gold-dim:   rgba(201,168,76,0.12);
+  --gold-dim2:  rgba(201,168,76,0.22);
+  --muted:      #5a5040;
+  --text:       #e0d4b8;
+  --text2:      #a09070;
+  --text3:      #6a5a40;
+  --danger:     #ff6b6b;
+  --danger-bg:  rgba(255,60,60,0.10);
+  --danger-bdr: rgba(255,80,80,0.25);
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Georgia', 'Times New Roman', serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button, select, input { font-family: inherit; }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.2); border-radius: 3px; }

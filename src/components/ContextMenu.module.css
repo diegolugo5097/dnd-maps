@@ -1,0 +1,180 @@
+/* ── Menu shell ── */
+.menu {
+  position: fixed;
+  z-index: 1000;
+  width: 280px;
+  max-height: 90vh;
+  background: var(--panel2);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  box-shadow: 0 0 0 1px rgba(201,168,76,0.06), 0 8px 40px rgba(0,0,0,0.9);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: menuIn 0.12s ease-out;
+  backdrop-filter: blur(18px);
+}
+@keyframes menuIn {
+  from { opacity:0; transform: scale(0.94) translateY(-4px); }
+  to   { opacity:1; transform: scale(1)    translateY(0);    }
+}
+
+/* ── Header ── */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px 7px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: rgba(201,168,76,0.04);
+}
+.title { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.06em; }
+.headerRight { display: flex; align-items: center; gap: 7px; }
+.turnBadge {
+  font-size: 10px; font-weight: 700; color: var(--gold);
+  background: var(--gold-dim); border: 1px solid var(--border2);
+  padding: 1px 6px; border-radius: 8px;
+}
+.close {
+  background: none; border: none; color: var(--text3);
+  font-size: 11px; cursor: pointer; padding: 2px 5px; border-radius: 4px; transition: color .12s;
+}
+.close:hover { color: var(--danger); }
+
+/* ── Quick action bar ── */
+.quickBar {
+  display: flex; align-items: center; gap: 3px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.quickBtn {
+  width: 28px; height: 28px;
+  border: 1px solid var(--border); border-radius: 7px;
+  background: transparent; color: var(--text3);
+  font-size: 13px; cursor: pointer; transition: all .12s;
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit;
+}
+.quickBtn:hover { background: rgba(255,255,255,0.07); color: var(--text); border-color: var(--border2); }
+.quickBtnActive { background: var(--gold-dim) !important; border-color: var(--gold) !important; color: var(--gold) !important; }
+.quickBtnErase  { background: var(--danger-bg) !important; border-color: var(--danger-bdr) !important; color: var(--danger) !important; }
+.quickBtnDanger:hover { background: var(--danger-bg) !important; border-color: var(--danger-bdr) !important; color: var(--danger) !important; }
+.quickSep { width: 1px; height: 18px; background: var(--border); margin: 0 2px; flex-shrink: 0; }
+
+/* ── Scrollable body ── */
+.body { overflow-y: auto; flex: 1; }
+
+/* ── Active power box ── */
+.activePowerBox {
+  margin: 8px 10px 4px;
+  border: 1px solid color-mix(in srgb, var(--pw) 35%, transparent);
+  background: color-mix(in srgb, var(--pw-bg) 70%, transparent);
+  border-radius: 9px;
+  padding: 8px 10px;
+}
+.activePowerHeader { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.activePowerDot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.activePowerName { font-size: 12px; font-weight: 700; color: var(--pw); }
+
+.durationRow { display: flex; align-items: center; gap: 7px; }
+.durationLabel { font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--muted); white-space: nowrap; }
+.durationControls { display: flex; align-items: center; gap: 4px; }
+.durationBtn {
+  width: 22px; height: 22px; border-radius: 5px;
+  border: 1px solid color-mix(in srgb, var(--pw) 30%, transparent);
+  background: color-mix(in srgb, var(--pw) 10%, transparent);
+  color: var(--pw); font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit; transition: background .12s;
+}
+.durationBtn:hover { background: color-mix(in srgb, var(--pw) 22%, transparent); }
+.durationInput {
+  width: 40px; padding: 2px 4px; text-align: center;
+  font-size: 13px; font-weight: 700; font-family: inherit;
+  color: var(--pw); background: rgba(0,0,0,0.4);
+  border: 1px solid color-mix(in srgb, var(--pw) 30%, transparent);
+  border-radius: 5px; outline: none;
+  -moz-appearance: textfield;
+}
+.durationInput::-webkit-outer-spin-button,
+.durationInput::-webkit-inner-spin-button { -webkit-appearance: none; }
+.durationInput:focus { border-color: var(--pw); }
+.durationDefault {
+  font-size: 9px; color: var(--text3); cursor: pointer;
+  text-decoration: underline dotted; white-space: nowrap;
+}
+.durationDefault:hover { color: var(--text2); }
+
+/* ── Submenu ── */
+.sub { border-bottom: 1px solid var(--border); }
+.subHeader {
+  width: 100%; display: flex; align-items: center; gap: 7px;
+  padding: 7px 12px; background: none; border: none;
+  color: var(--text2); font-size: 11px; font-family: inherit;
+  cursor: pointer; transition: background .12s; text-align: left;
+}
+.subHeader:hover { background: rgba(255,255,255,0.04); }
+.subHeaderOpen { color: var(--text); }
+.subIcon  { font-size: 13px; width: 16px; text-align: center; flex-shrink: 0; }
+.subLabel { flex: 1; font-weight: 600; letter-spacing: 0.02em; }
+.subBadge {
+  font-size: 9px; color: var(--gold);
+  background: var(--gold-dim); border: 1px solid var(--border2);
+  padding: 1px 5px; border-radius: 8px; max-width: 100px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.subArrow {
+  font-size: 14px; color: var(--muted); transition: transform .15s;
+  display: inline-block; line-height: 1;
+}
+.subArrowOpen { transform: rotate(90deg); color: var(--text2); }
+.subBody { padding: 4px 10px 10px; }
+
+/* ── Powers inside submenu ── */
+.catGroup { margin-bottom: 7px; }
+.catLabel {
+  font-size: 8px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; display: block; margin-bottom: 4px;
+}
+.powerRow { display: flex; flex-direction: column; gap: 2px; }
+.powerBtn {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 8px; font-size: 11px; font-family: inherit;
+  border: 1px solid transparent; border-radius: 7px;
+  background: transparent; color: var(--text3); cursor: pointer;
+  transition: all .11s; text-align: left; width: 100%;
+}
+.powerBtn:hover { background: rgba(255,255,255,0.05); color: var(--text2); border-color: var(--border); }
+.powerBtnActive {
+  border-color: var(--pw) !important;
+  background: var(--pw-bg) !important;
+  color: var(--pw) !important;
+}
+.powerDot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.powerName { font-weight: 500; line-height: 1.2; }
+
+/* ── Grid settings ── */
+.gridRow { display: flex; gap: 8px; }
+.gridLabel {
+  display: flex; flex-direction: column; gap: 3px;
+  font-size: 10px; color: var(--text3); flex: 1;
+}
+.gridInput {
+  width: 100%; padding: 4px 6px; font-size: 12px; font-family: inherit;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: rgba(0,0,0,0.4); color: var(--text2); outline: none;
+  transition: border-color .12s;
+}
+.gridInput:focus { border-color: var(--gold); }
+
+/* ── Rotation ── */
+.rotRow { display: flex; gap: 4px; }
+.rotBtn {
+  flex: 1; padding: 5px 4px; font-size: 11px; font-family: inherit;
+  border: 1px solid var(--border); border-radius: 7px;
+  background: transparent; color: var(--text3); cursor: pointer;
+  transition: all .12s;
+}
+.rotBtn:hover { border-color: var(--border2); color: var(--text2); }
+.rotBtnActive { border-color: var(--gold) !important; background: var(--gold-dim) !important; color: var(--gold) !important; }
