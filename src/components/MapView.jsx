@@ -17,6 +17,26 @@ function getImageRect(imgNW, imgNH, rotation, cw, ch) {
   return { x: (cw - w) / 2, y: (ch - h) / 2, w, h, scale };
 }
 
+
+// Draw grid on its own canvas so it always appears above GIFs
+function drawGrid(canvas, img, gridCols, gridRows, rotation) {
+  const ctx = canvas.getContext("2d");
+  const cw  = canvas.width;
+  const ch  = canvas.height;
+  ctx.clearRect(0, 0, cw, ch);
+  const nw = img?.naturalWidth  || cw;
+  const nh = img?.naturalHeight || ch;
+  const ir = getImageRect(nw, nh, rotation, cw, ch);
+  const cellW = ir.w / gridCols;
+  const cellH = ir.h / gridRows;
+  ctx.strokeStyle = "rgba(0,0,0,0.55)";
+  ctx.lineWidth   = 1;
+  for (let r = 0; r < gridRows; r++) {
+    for (let c = 0; c < gridCols; c++) {
+      ctx.strokeRect(ir.x + c * cellW, ir.y + r * cellH, cellW, cellH);
+    }
+  }
+}
 function screenToGridCell(clientX, clientY, canvas, img, gridCols, gridRows, rotation) {
   if (!canvas) return null;
   const rect   = canvas.getBoundingClientRect();
@@ -58,16 +78,7 @@ function drawScene(canvas, img, board, gridCols, gridRows, rotation) {
     ctx.restore();
   }
 
-  // Draw grid lines only
-  const cellW = ir.w / gridCols;
-  const cellH = ir.h / gridRows;
-  ctx.strokeStyle = "rgba(0,0,0,0.28)";
-  ctx.lineWidth   = 0.5;
-  for (let r = 0; r < gridRows; r++) {
-    for (let c = 0; c < gridCols; c++) {
-      ctx.strokeRect(ir.x + c * cellW, ir.y + r * cellH, cellW, cellH);
-    }
-  }
+  // Grid lines drawn on a separate canvas on top of GIFs
 }
 
 // ── GIF overlay layer ─────────────────────────────────────────────────────────
@@ -161,13 +172,7 @@ function GifOverlay({ board, gridRows, gridCols, ir }) {
                   ))}
                 </clipPath>
               </defs>
-              {/* Color fallback (always visible) */}
-              <g clipPath={`url(#${clipId})`}>
-                {rects.map((rect, ri) => (
-                  <rect key={ri} x={rect.x} y={rect.y} width={rect.w} height={rect.h}
-                    fill={pw.color} fillOpacity={pw.alpha * 0.75} />
-                ))}
-              </g>
+              {/* No color fill — GIF only */}
             </svg>
 
             {/* GIF image clipped to the group shape */}
@@ -201,6 +206,7 @@ export function MapView({
   setStatus, onContextMenu, onSoundTrigger,
 }) {
   const sceneRef  = useRef(null);
+  const gridRef   = useRef(null);
   const imgRef    = useRef(null);
   const boardRef  = useRef(board);
   const paramsRef = useRef({ gridCols, gridRows, rotation });
@@ -227,12 +233,14 @@ export function MapView({
   const doResize = useCallback(() => {
     const W = window.innerWidth;
     const H = window.innerHeight;
-    const c = sceneRef.current;
-    if (!c) return;
-    c.width        = W;
-    c.height       = H;
-    c.style.width  = W + "px";
-    c.style.height = H + "px";
+    [sceneRef, gridRef].forEach(ref => {
+      const c = ref.current;
+      if (!c) return;
+      c.width        = W;
+      c.height       = H;
+      c.style.width  = W + "px";
+      c.style.height = H + "px";
+    });
     doRedraw();
     updateIR();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -263,6 +271,8 @@ export function MapView({
       if (!canvas || !canvas.width) return;
       const { gridCols: gc, gridRows: gr, rotation: rot } = paramsRef.current;
       drawScene(canvas, imgRef.current, boardRef.current, gc, gr, rot);
+      const gridCanvas = gridRef.current;
+      if (gridCanvas) drawGrid(gridCanvas, imgRef.current, gc, gr, rot);
     });
   }, []);
 
@@ -314,7 +324,8 @@ export function MapView({
         onContextMenu={handleContextMenu}
       />
 
-      {/* GIF overlay — positioned relative to the wrap div */}
+        {/* Grid canvas — always on top of GIFs */}
+      {/* GIF overlay — below grid */}
       {mapImage && ir.w > 0 && (
         <div className={s.gifLayer} style={{ pointerEvents: "none" }}>
           <GifOverlay
@@ -325,6 +336,9 @@ export function MapView({
           />
         </div>
       )}
+
+      {/* Grid canvas — on top of GIFs */}
+      <canvas ref={gridRef} className={s.gridOverlay} style={{ pointerEvents: "none" }} />
     </div>
   );
 }
