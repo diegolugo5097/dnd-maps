@@ -5,6 +5,7 @@ export function useFreehand({
   mode, currentPower, customDuration,
   setBoard, setStatus,
   onSoundAndVFX,
+  onRevealFog,   // (r, c) => void  — called when erasing over a fogged cell
   screenToCell,
 }) {
   const isDrawing    = useRef(false);
@@ -12,21 +13,22 @@ export function useFreehand({
   const strokeCells  = useRef([]);
   const soundPlayed  = useRef(false);
 
-  const modeRef            = useRef(mode);
-  const powerRef           = useRef(currentPower);
-  const durationRef        = useRef(customDuration);
-  const setBoardRef        = useRef(setBoard);
-  const setStatusRef       = useRef(setStatus);
-  const vfxRef             = useRef(onSoundAndVFX);
-  const screenToCellRef    = useRef(screenToCell);
+  const modeRef         = useRef(mode);
+  const powerRef        = useRef(currentPower);
+  const durationRef     = useRef(customDuration);
+  const setBoardRef     = useRef(setBoard);
+  const setStatusRef    = useRef(setStatus);
+  const vfxRef          = useRef(onSoundAndVFX);
+  const revealRef       = useRef(onRevealFog);
+  const screenToCellRef = useRef(screenToCell);
 
-  // Always current — no stale closures
   modeRef.current         = mode;
   powerRef.current        = currentPower;
-  durationRef.current     = customDuration ?? currentPower?.duration ?? 0;
+  durationRef.current     = customDuration ?? currentPower?.duration ?? 1;
   setBoardRef.current     = setBoard;
   setStatusRef.current    = setStatus;
   vfxRef.current          = onSoundAndVFX;
+  revealRef.current       = onRevealFog;
   screenToCellRef.current = screenToCell;
 
   const getCell = useCallback((e) => {
@@ -34,23 +36,30 @@ export function useFreehand({
   }, []);
 
   const stampCell = useCallback((r, c) => {
-    const m        = modeRef.current;
-    const pw       = powerRef.current;
-    const duration = durationRef.current;
+    const m  = modeRef.current;
+    const pw = powerRef.current;
+    const dur = durationRef.current;
 
-    setBoardRef.current(prev => {
-      const next = prev.map(row => row.map(cell => ({ ...cell, effects: [...cell.effects] })));
-      if (m === "power" && pw) {
-        // Remove any existing effect of same power on this cell
-        next[r][c].effects = next[r][c].effects.filter(e => e.powerId !== pw.id);
-        // Add with custom duration
-        next[r][c].effects.push({ powerId: pw.id, remaining: duration });
-
-      } else if (m === "erase") {
+    if (m === "erase") {
+      // Reveal fog on this cell
+      revealRef.current?.(r, c);
+      // Also clear board effects
+      setBoardRef.current(prev => {
+        const next = prev.map(row => row.map(cell => ({ ...cell, effects: [...cell.effects] })));
         next[r][c] = { effects: [] };
-      }
-      return next;
-    });
+        return next;
+      });
+      return;
+    }
+
+    if (m === "power" && pw) {
+      setBoardRef.current(prev => {
+        const next = prev.map(row => row.map(cell => ({ ...cell, effects: [...cell.effects] })));
+        next[r][c].effects = next[r][c].effects.filter(e => e.powerId !== pw.id);
+        next[r][c].effects.push({ powerId: pw.id, remaining: dur });
+        return next;
+      });
+    }
   }, []);
 
   const onPointerDown = useCallback((e) => {
@@ -97,18 +106,15 @@ export function useFreehand({
   const onPointerUp = useCallback(() => {
     if (!isDrawing.current) return;
     isDrawing.current = false;
-    const count    = strokeCells.current.length;
-    const m        = modeRef.current;
-    const pw       = powerRef.current;
-    const duration = durationRef.current;
+    const count = strokeCells.current.length;
     if (count === 0) return;
+    const m   = modeRef.current;
+    const pw  = powerRef.current;
+    const dur = durationRef.current;
     if (m === "power" && pw) {
-      setStatusRef.current(
-        `✅ ${pw.name} · ${count} celda(s) · ` +
-        `${duration} turno(s)`
-      );
+      setStatusRef.current(`✅ ${pw.name} · ${count} celda(s) · ${dur} turno(s)`);
     } else if (m === "erase") {
-      setStatusRef.current(`Borradas ${count} celda(s).`);
+      setStatusRef.current(`${count} celda(s) reveladas/borradas.`);
     }
     strokeCells.current = [];
     paintedSet.current  = new Set();

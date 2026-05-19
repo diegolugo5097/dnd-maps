@@ -27,6 +27,8 @@ export function ContextMenu({
   onGridColsChange, onGridRowsChange, onCellSizeChange,
   onNextTurn, onClear, turn,
   rotation, onRotationChange,
+  gridColor, onGridColorChange,
+  fogActive, onFogToggle,
 }) {
   const ref = useRef(null);
 
@@ -82,6 +84,10 @@ export function ContextMenu({
         <div className={s.quickSep} />
         <button className={s.quickBtn} title="Girar mapa 90°"
           onClick={() => onRotationChange((rotation + 90) % 360)}>↻</button>
+        <div className={s.quickSep} />
+        <button className={`${s.quickBtn} ${fogActive ? s.quickBtnActive : ""}`}
+          title={fogActive ? "Quitar neblina" : "Activar neblina"}
+          onClick={onFogToggle}>🌫</button>
       </div>
 
       <div className={s.body}>
@@ -152,6 +158,26 @@ export function ContextMenu({
               <input type="number" min="4" max="60" value={gridRows} className={s.gridInput}
                 onChange={e => onGridRowsChange(parseInt(e.target.value) || gridRows)} />
             </label>
+          </div>
+          <div className={s.colorRow}>
+            <span className={s.colorLabel}>Color líneas</span>
+            <div className={s.colorSwatches}>
+              {["rgba(0,0,0,0.55)","rgba(255,255,255,0.6)","rgba(255,220,100,0.7)","rgba(100,200,255,0.7)","rgba(255,100,100,0.7)","rgba(100,255,150,0.7)"].map(col => (
+                <button key={col} className={`${s.colorSwatch} ${gridColor === col ? s.colorSwatchActive : ""}`}
+                  style={{ background: col === "rgba(0,0,0,0.55)" ? "#333" : col === "rgba(255,255,255,0.6)" ? "#eee" : col }}
+                  onClick={() => onGridColorChange(col)}
+                  title={col} />
+              ))}
+              <input type="color" className={s.colorPicker}
+                title="Color personalizado"
+                onChange={e => {
+                  const hex = e.target.value;
+                  const r = parseInt(hex.slice(1,3),16);
+                  const g = parseInt(hex.slice(3,5),16);
+                  const b = parseInt(hex.slice(5,7),16);
+                  onGridColorChange(`rgba(${r},${g},${b},0.7)`);
+                }} />
+            </div>
           </div>
         </SubMenu>
 

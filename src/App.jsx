@@ -10,20 +10,38 @@ const DEFAULT_COLS     = 20;
 const DEFAULT_ROWS     = 30;
 const DEFAULT_CELLSIZE = 48;
 
+function makeFogSet(cols, rows) {
+  const s = new Set();
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++)
+      s.add(`${r},${c}`);
+  return s;
+}
+
 export default function App() {
-  const [mapImage, setMapImage]           = useState(null);
-  const [board, setBoard]                 = useState(() => makeBoard(DEFAULT_COLS, DEFAULT_ROWS));
-  const [gridCols, setGridCols]           = useState(DEFAULT_COLS);
-  const [gridRows, setGridRows]           = useState(DEFAULT_ROWS);
-  const [cellSize, setCellSize]           = useState(DEFAULT_CELLSIZE);
-  const [rotation, setRotation]           = useState(0);
-  const [mode, setMode]                   = useState("power");
-  const [currentPower, setCurrentPower]   = useState(POWERS[0]);
+  const [mapImage, setMapImage]             = useState(null);
+  const [board, setBoard]                   = useState(() => makeBoard(DEFAULT_COLS, DEFAULT_ROWS));
+  const [gridCols, setGridCols]             = useState(DEFAULT_COLS);
+  const [gridRows, setGridRows]             = useState(DEFAULT_ROWS);
+  const [cellSize, setCellSize]             = useState(DEFAULT_CELLSIZE);
+  const [rotation, setRotation]             = useState(0);
+  const [gridColor, setGridColor]           = useState("rgba(0,0,0,0.55)");
+  const [mode, setMode]                     = useState("power");
+  const [currentPower, setCurrentPower]     = useState(POWERS[0]);
   const [customDuration, setCustomDuration] = useState(POWERS[0].duration);
-  const [turn, setTurn]                   = useState(1);
-  const [status, setStatus]               = useState("Clic derecho → menú · Carga tu imagen de mapa");
-  const [menuPos, setMenuPos]             = useState(null);
-  const fileInputRef                      = useRef(null);
+  const [turn, setTurn]                     = useState(1);
+  const [status, setStatus]                 = useState("Clic derecho → menú · Carga tu imagen de mapa");
+  const [menuPos, setMenuPos]               = useState(null);
+
+  // fog: null = sin neblina
+  // fogSet: el Set mutable, fogVersion: número que fuerza re-render
+  const fogSetRef                           = useRef(null);
+  const [fogVersion, setFogVersion]         = useState(0);
+
+  const fileInputRef = useRef(null);
+
+  // Derived: is fog active?
+  const fogActive = fogSetRef.current !== null;
 
   // Active effects summary
   const activeEffects = (() => {
@@ -39,7 +57,6 @@ export default function App() {
       .filter(x => x.pw);
   })();
 
-  // File load
   const handleLoadMap = useCallback(() => fileInputRef.current?.click(), []);
   const handleFileChange = useCallback((e) => {
     const file = e.target.files?.[0];
@@ -50,18 +67,26 @@ export default function App() {
     e.target.value = "";
   }, []);
 
-  // Grid
   const handleGridColsChange = useCallback((n) => {
     const cols = Math.max(4, Math.min(60, n));
     setGridCols(cols); setBoard(makeBoard(cols, gridRows));
+    if (fogSetRef.current) {
+      fogSetRef.current = makeFogSet(cols, gridRows);
+      setFogVersion(v => v + 1);
+    }
   }, [gridRows]);
+
   const handleGridRowsChange = useCallback((n) => {
     const rows = Math.max(4, Math.min(60, n));
     setGridRows(rows); setBoard(makeBoard(gridCols, rows));
+    if (fogSetRef.current) {
+      fogSetRef.current = makeFogSet(gridCols, rows);
+      setFogVersion(v => v + 1);
+    }
   }, [gridCols]);
+
   const handleCellSizeChange = useCallback((n) => setCellSize(Math.max(20, Math.min(100, n))), []);
 
-  // Turn
   const handleNextTurn = useCallback(() => {
     const { next, expired } = tickBoard(board, POWERS);
     setBoard(next);
@@ -76,17 +101,15 @@ export default function App() {
     setBoard(makeBoard(gridCols, gridRows)); setTurn(1); setStatus("Efectos limpiados.");
   }, [gridCols, gridRows]);
 
-  // Mode & power
   const handleSetMode = useCallback((m) => {
     setMode(m);
-    if (m === "power") setStatus(`Poder: ${currentPower.name} · ${customDuration === 0 ? "instantáneo" : `${customDuration} turno(s)`} · dibuja a mano libre.`);
-    if (m === "erase") setStatus("Modo borrar · arrastra para limpiar.");
+    if (m === "power") setStatus(`Poder: ${currentPower.name} · ${customDuration} turno(s) · dibuja a mano libre.`);
+    if (m === "erase") setStatus(fogSetRef.current ? "Borrar: arrastra para revelar neblina o limpiar efectos." : "Borrar: arrastra para limpiar efectos.");
   }, [currentPower, customDuration]);
 
   const handleSelectPower = useCallback((pw) => {
-    setCurrentPower(pw);
-    setCustomDuration(pw.duration); // reset duration to power default
-    setStatus(`${pw.name} · duración: ${pw.duration === 0 ? "instantáneo" : `${pw.duration} turno(s)`}`);
+    setCurrentPower(pw); setCustomDuration(pw.duration);
+    setStatus(`${pw.name} · duración: ${pw.duration} turno(s)`);
   }, []);
 
   const handleDurationChange = useCallback((val) => {
@@ -94,7 +117,23 @@ export default function App() {
     setStatus(`${currentPower.name} · duración personalizada: ${val} turno(s)`);
   }, [currentPower]);
 
-  // Sound
+  // Reveal fog on a single cell — mutate ref then bump version counter
+  const handleRevealFog = useCallback((r, c) => {
+    if (!fogSetRef.current) return;
+    fogSetRef.current.delete(`${r},${c}`);
+    if (fogSetRef.current.size === 0) fogSetRef.current = null;
+    setFogVersion(v => v + 1); // triggers re-render
+  }, []);
+
+  const handleFogToggle = useCallback(() => {
+    if (fogSetRef.current) {
+      fogSetRef.current = null;
+    } else {
+      fogSetRef.current = makeFogSet(gridCols, gridRows);
+    }
+    setFogVersion(v => v + 1);
+  }, [gridCols, gridRows]);
+
   const handleSound = useCallback((soundId) => {
     if (soundId) playSound(soundId);
   }, []);
@@ -106,10 +145,13 @@ export default function App() {
 
       <MapView
         mapImage={mapImage}
-        board={board}         setBoard={setBoard}
-        gridCols={gridCols}   gridRows={gridRows}
-        cellSize={cellSize}   rotation={rotation}
-        mode={mode}           currentPower={currentPower}
+        board={board}             setBoard={setBoard}
+        gridCols={gridCols}       gridRows={gridRows}
+        cellSize={cellSize}       rotation={rotation}
+        gridColor={gridColor}
+        fogSet={fogSetRef.current}
+        onRevealFog={handleRevealFog}
+        mode={mode}               currentPower={currentPower}
         customDuration={customDuration}
         setStatus={setStatus}
         onContextMenu={pos => setMenuPos(pos)}
@@ -117,28 +159,32 @@ export default function App() {
       />
 
       <HUD
-        mode={mode} currentPower={currentPower}
+        mode={mode}             currentPower={currentPower}
         customDuration={customDuration}
-        turn={turn} status={status} activeEffects={activeEffects}
+        turn={turn}             status={status}
+        activeEffects={activeEffects}
       />
 
       {menuPos && (
         <ContextMenu
           pos={menuPos}
-          mode={mode}           currentPower={currentPower}
+          mode={mode}               currentPower={currentPower}
           customDuration={customDuration}
           onSelectPower={handleSelectPower}
           onSetMode={handleSetMode}
           onClose={() => setMenuPos(null)}
           onLoadMap={handleLoadMap}
           onDurationChange={handleDurationChange}
-          gridCols={gridCols}   gridRows={gridRows}   cellSize={cellSize}
+          gridCols={gridCols}       gridRows={gridRows}       cellSize={cellSize}
           onGridColsChange={handleGridColsChange}
           onGridRowsChange={handleGridRowsChange}
           onCellSizeChange={handleCellSizeChange}
-          onNextTurn={handleNextTurn} onClear={handleClear}
+          onNextTurn={handleNextTurn}
+          onClear={handleClear}
           turn={turn}
-          rotation={rotation}   onRotationChange={setRotation}
+          rotation={rotation}       onRotationChange={setRotation}
+          gridColor={gridColor}     onGridColorChange={setGridColor}
+          fogActive={fogActive}     onFogToggle={handleFogToggle}
         />
       )}
     </>

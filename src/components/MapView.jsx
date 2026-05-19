@@ -19,7 +19,7 @@ function getImageRect(imgNW, imgNH, rotation, cw, ch) {
 
 
 // Draw grid on its own canvas so it always appears above GIFs
-function drawGrid(canvas, img, gridCols, gridRows, rotation) {
+function drawGrid(canvas, img, gridCols, gridRows, rotation, gridColor) {
   const ctx = canvas.getContext("2d");
   const cw  = canvas.width;
   const ch  = canvas.height;
@@ -29,7 +29,7 @@ function drawGrid(canvas, img, gridCols, gridRows, rotation) {
   const ir = getImageRect(nw, nh, rotation, cw, ch);
   const cellW = ir.w / gridCols;
   const cellH = ir.h / gridRows;
-  ctx.strokeStyle = "rgba(0,0,0,0.55)";
+  ctx.strokeStyle = gridColor || "rgba(0,0,0,0.55)";
   ctx.lineWidth   = 1;
   for (let r = 0; r < gridRows; r++) {
     for (let c = 0; c < gridCols; c++) {
@@ -196,6 +196,95 @@ function GifOverlay({ board, gridRows, gridCols, ir }) {
   );
 }
 
+
+// ── Fog of War layer ──────────────────────────────────────────────────────────
+// Renders one GIF (or dark fallback) per fogged cell
+function FogLayer({ fogSet, gridRows, gridCols, ir }) {
+  const canvasRef = useRef(null);
+  const clipId = useRef(`fog-clip-${Math.random().toString(36).slice(2)}`).current;
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !fogSet || ir.w <= 0) return;
+    canvas.width  = ir.w;
+    canvas.height = ir.h;
+    const ctx   = canvas.getContext("2d");
+    const cellW = ir.w / gridCols;
+    const cellH = ir.h / gridRows;
+
+    ctx.clearRect(0, 0, ir.w, ir.h);
+    ctx.fillStyle = "rgba(15,12,30,0.82)";
+    ctx.fillRect(0, 0, ir.w, ir.h);
+
+    ctx.globalCompositeOperation = "destination-out";
+    for (let r = 0; r < gridRows; r++) {
+      for (let c = 0; c < gridCols; c++) {
+        if (!fogSet.has(`${r},${c}`)) {
+          ctx.fillStyle = "rgba(0,0,0,1)";
+          ctx.fillRect(c * cellW, r * cellH, cellW, cellH);
+        }
+      }
+    }
+    ctx.globalCompositeOperation = "source-over";
+  });
+
+  if (!fogSet || fogSet.size === 0 || ir.w <= 0) return null;
+
+  const cellW = ir.w / gridCols;
+  const cellH = ir.h / gridRows;
+
+  // Build clipPath rects — only fogged cells show the GIF
+  const foggedRects = [];
+  for (let r = 0; r < gridRows; r++) {
+    for (let c = 0; c < gridCols; c++) {
+      if (fogSet.has(`${r},${c}`)) {
+        foggedRects.push({ x: c * cellW, y: r * cellH, w: cellW, h: cellH });
+      }
+    }
+  }
+
+  return (
+    <div style={{
+      position: "absolute",
+      left: ir.x, top: ir.y,
+      width: ir.w, height: ir.h,
+      pointerEvents: "none",
+    }}>
+      {/* SVG clipPath — GIF only shows on fogged cells */}
+      <svg width={0} height={0} style={{ position: "absolute" }}>
+        <defs>
+          <clipPath id={clipId}>
+            {foggedRects.map((rect, i) => (
+              <rect key={i} x={rect.x} y={rect.y} width={rect.w} height={rect.h} />
+            ))}
+          </clipPath>
+        </defs>
+      </svg>
+
+      {/* Canvas: dark fog with revealed holes */}
+      <canvas
+        ref={canvasRef}
+        style={{ position: "absolute", inset: 0, display: "block" }}
+      />
+
+      {/* GIF clipped to only fogged cells */}
+      <img
+        src="/effects/fog.gif"
+        alt=""
+        style={{
+          position: "absolute", inset: 0,
+          width: "100%", height: "100%",
+          objectFit: "cover",
+          opacity: 0.5,
+          mixBlendMode: "screen",
+          clipPath: `url(#${clipId})`,
+        }}
+        onError={e => { e.currentTarget.style.display = "none"; }}
+      />
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function MapView({
@@ -203,6 +292,8 @@ export function MapView({
   gridCols, gridRows, cellSize,
   rotation,
   mode, currentPower, customDuration,
+  gridColor,
+  fogSet, onRevealFog,
   setStatus, onContextMenu, onSoundTrigger,
 }) {
   const sceneRef  = useRef(null);
@@ -212,7 +303,7 @@ export function MapView({
   const paramsRef = useRef({ gridCols, gridRows, rotation });
 
   boardRef.current  = board;
-  paramsRef.current = { gridCols, gridRows, rotation };
+  paramsRef.current = { gridCols, gridRows, rotation, gridColor };
 
   // Track image rect in state so GifOverlay re-renders when it changes
   const [ir, setIr] = useState({ x: 0, y: 0, w: 0, h: 0, scale: 1 });
@@ -272,11 +363,11 @@ export function MapView({
       const { gridCols: gc, gridRows: gr, rotation: rot } = paramsRef.current;
       drawScene(canvas, imgRef.current, boardRef.current, gc, gr, rot);
       const gridCanvas = gridRef.current;
-      if (gridCanvas) drawGrid(gridCanvas, imgRef.current, gc, gr, rot);
+      if (gridCanvas) drawGrid(gridCanvas, imgRef.current, gc, gr, rot, paramsRef.current.gridColor);
     });
   }, []);
 
-  useEffect(() => { doRedraw(); updateIR(); }, [board, rotation, gridCols, gridRows, doRedraw, updateIR]);
+  useEffect(() => { doRedraw(); updateIR(); }, [board, rotation, gridCols, gridRows, gridColor, doRedraw, updateIR]);
 
   // ── screenToCell ──────────────────────────────────────────────────────────
   const screenToCell = useCallback((clientX, clientY) => {
@@ -292,7 +383,7 @@ export function MapView({
   const { onPointerDown, onPointerMove, onPointerUp } = useFreehand({
     cellSize, gridCols, gridRows, mode, currentPower, customDuration,
     setBoard, setStatus, onSoundAndVFX: handleSoundAndVFX,
-    screenToCell,
+    onRevealFog, screenToCell,
   });
 
   const handleContextMenu = useCallback((e) => {
@@ -301,7 +392,7 @@ export function MapView({
   }, [onContextMenu]);
 
   return (
-    <div className={s.wrap}>
+    <div className={s.wrap} onContextMenu={handleContextMenu}>
       {!mapImage && (
         <div className={s.placeholder}>
           <div className={s.placeholderInner}>
@@ -325,6 +416,13 @@ export function MapView({
       />
 
         {/* Grid canvas — always on top of GIFs */}
+      {/* Fog of war — per-cell reveal */}
+      {mapImage && fogSet && fogSet.size > 0 && ir.w > 0 && (
+        <div className={s.gifLayer} style={{ pointerEvents: "none" }}>
+          <FogLayer fogSet={fogSet} gridRows={gridRows} gridCols={gridCols} ir={ir} />
+        </div>
+      )}
+
       {/* GIF overlay — below grid */}
       {mapImage && ir.w > 0 && (
         <div className={s.gifLayer} style={{ pointerEvents: "none" }}>

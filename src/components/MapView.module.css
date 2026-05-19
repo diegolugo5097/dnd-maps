@@ -5,18 +5,38 @@
   background: #0a0907;
 }
 
-/* Both canvases fill the window exactly — no scroll ever */
-.scene, .vfx {
+/* Scene canvas — recibe todos los eventos de puntero */
+.scene {
   position: fixed;
   inset: 0;
   width: 100vw;
   height: 100vh;
   display: block;
   touch-action: none;
+  z-index: 10;
 }
-.vfx { pointer-events: none; }
 
-/* Placeholder shown when no image is loaded */
+/* GIF effects layer — encima del scene pero sin eventos */
+.gifLayer {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none !important;
+  z-index: 20;
+}
+
+/* Grid canvas — encima de los GIFs, sin eventos */
+.gridOverlay {
+  position: fixed;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+  z-index: 30;
+}
+
+/* HUD y menús van en z-index 100+ */
+
+/* Placeholder */
 .placeholder {
   position: fixed;
   inset: 0;
@@ -24,7 +44,7 @@
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  z-index: 1;
+  z-index: 5;
 }
 .placeholderInner {
   display: flex;
@@ -36,17 +56,3 @@
 .placeholderIcon  { font-size: 64px; }
 .placeholderTitle { font-size: 20px; color: var(--gold); font-weight: 700; letter-spacing: 0.04em; }
 .placeholderSub   { font-size: 13px; color: var(--text3); }
-
-/* GIF overlay layer — same position as canvas */
-.gifLayer {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-}
-
-/* Grid canvas — sits above GIFs, below HUD */
-.gridOverlay {
-  position: fixed;
-  inset: 0;
-  display: block;
-}
