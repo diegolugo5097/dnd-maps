@@ -86,38 +86,19 @@ function drawScene(canvas, img, board, gridCols, gridRows, rotation) {
 // so one GIF covers the whole painted area cleanly.
 
 function groupEffects(board, gridRows, gridCols) {
-  // Returns array of { powerId, cells: [[r,c],...] }
-  // Simple approach: one group per (powerId, connected-region)
-  const visited = Array.from({ length: gridRows }, () => new Array(gridCols).fill(false));
-  const groups  = [];
-
+  // One group per unique powerId — collect all cells with that effect
+  const byPower = {};
   for (let r = 0; r < gridRows; r++) {
     for (let c = 0; c < gridCols; c++) {
-      if (visited[r][c]) continue;
       const cell = board[r]?.[c];
       if (!cell?.effects?.length) continue;
-
       for (const eff of cell.effects) {
-        if (visited[r][c]) continue;
-        // BFS flood fill for this powerId
-        const pid   = eff.powerId;
-        const cells = [];
-        const queue = [[r, c]];
-        while (queue.length) {
-          const [cr, cc] = queue.shift();
-          if (cr < 0 || cr >= gridRows || cc < 0 || cc >= gridCols) continue;
-          if (visited[cr][cc]) continue;
-          const ce = board[cr]?.[cc];
-          if (!ce?.effects?.some(e => e.powerId === pid)) continue;
-          visited[cr][cc] = true;
-          cells.push([cr, cc]);
-          queue.push([cr-1,cc],[cr+1,cc],[cr,cc-1],[cr,cc+1]);
-        }
-        if (cells.length) groups.push({ powerId: pid, cells });
+        if (!byPower[eff.powerId]) byPower[eff.powerId] = [];
+        byPower[eff.powerId].push([r, c]);
       }
     }
   }
-  return groups;
+  return Object.entries(byPower).map(([powerId, cells]) => ({ powerId, cells }));
 }
 
 function GifOverlay({ board, gridRows, gridCols, ir }) {
