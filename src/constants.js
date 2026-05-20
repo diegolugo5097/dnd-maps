@@ -83,6 +83,13 @@ export const POWERS = [
     detail: "Drena vida de criaturas vivas. Fortalece a no-muertos.",
     sound: "darkness",
   },
+  {
+    id: "thorns",     name: "Espinas",           color: "#2d6a1f", bg: "rgba(5,18,0,0.95)",
+    alpha: 0.78, duration: 3, category: "naturaleza",
+    desc: "Zona de espinas · 3 turnos",
+    detail: "Daño perforante a cualquier criatura que entre o se mueva por el área.",
+    sound: "earth",
+  },
 ];
 
 export const CATEGORIES = {

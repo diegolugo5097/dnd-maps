@@ -3,7 +3,7 @@
 
 const cache = {};   // powerId → HTMLAudioElement (or null if failed)
 const SOUND_IDS = ["fire", "fire_wall", "ice", "lightning", "poison",
-                   "earth", "holy", "darkness", "water", "wind", "acid", "necrotic"];
+                   "earth", "holy", "darkness", "water", "wind", "acid", "necrotic", "thorns"];
 
 // Map power id → mp3 filename base
 // fire_wall reuses fire-spell.mp3, acid reuses poison-spell.mp3, etc.
@@ -20,6 +20,7 @@ const SOUND_FILE = {
   wind:      "wind",
   acid:      "acid",
   necrotic:  "necrotic",
+  thorns:    "thorns",
 };
 
 function loadAudio(powerId) {
@@ -147,6 +148,26 @@ const SYNTH = {
 SYNTH.fire_wall = SYNTH.fire;
 SYNTH.acid      = SYNTH.poison;
 SYNTH.necrotic  = SYNTH.darkness;
+SYNTH.thorns = function() {
+  const ac = getACtx(), out = ac.createGain(); out.gain.value = 0.38; out.connect(ac.destination);
+  // Rustling noise
+  const buf = ac.createBuffer(1, ac.sampleRate * 0.6, ac.sampleRate);
+  const d   = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1) * Math.sin(i*0.008);
+  const n  = ac.createBufferSource(); n.buffer = buf;
+  const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1200; bp.Q.value = 1.5;
+  const g  = ac.createGain(); g.gain.setValueAtTime(0.5, ac.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+0.6);
+  n.connect(bp); bp.connect(g); g.connect(out); n.start();
+  // Sharp impact
+  [180, 260].forEach((freq, i) => {
+    const o = ac.createOscillator(), og = ac.createGain();
+    o.type = 'sawtooth'; o.frequency.value = freq;
+    og.gain.setValueAtTime(0.3, ac.currentTime + i*0.04);
+    og.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.25 + i*0.04);
+    o.connect(og); og.connect(out);
+    o.start(ac.currentTime + i*0.04); o.stop(ac.currentTime + 0.3 + i*0.04);
+  });
+};
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
