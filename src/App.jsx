@@ -3,6 +3,7 @@ import { POWERS }               from "./constants";
 import { makeBoard, tickBoard }  from "./boardUtils";
 import { playSound }             from "./audio/sounds";
 import { MapView }               from "./components/MapView";
+import { MusicPanel }            from "./components/MusicPanel";
 import { ContextMenu }           from "./components/ContextMenu";
 import { HUD }                   from "./components/HUD";
 
@@ -164,6 +165,8 @@ export default function App() {
         turn={turn}             status={status}
         activeEffects={activeEffects}
       />
+
+      <MusicPanel />
 
       {menuPos && (
         <ContextMenu
